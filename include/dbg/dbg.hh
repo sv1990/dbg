@@ -83,6 +83,13 @@ requires(detail::output_streamable<T>                        //
   static void print(std::ostream& os, const T& x) noexcept { os << x; }
 };
 
+template <>
+struct printer<bool> {
+  static void print(std::ostream& os, bool b) noexcept {
+    os << (b ? "true" : "false");
+  }
+};
+
 template <typename T>
 requires(detail::range<T>                                     //
          and not detail::convertible_to<T, std::string_view>) //

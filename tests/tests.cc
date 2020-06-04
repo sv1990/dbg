@@ -46,6 +46,8 @@ TEST_CASE("tests") {
   CHECK(to_string(4.2) == "4.2");
   int n = 42;
   CHECK(to_string(n) == "42");
+  CHECK(to_string(true) == "true");
+  CHECK(to_string(false) == "false");
   std::vector v{1, 2, 3};
   CHECK(to_string(v) == "[1, 2, 3]");
   std::vector vv{v, v, v};
