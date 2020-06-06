@@ -72,6 +72,8 @@ TEST_CASE("tests") {
   CHECK(to_string(p) == "null");
   p = &n;
   CHECK(to_string(p) == to_string(n));
+  void* vp = &n;
+  CHECK(to_string(vp).substr(0, 2) == "0x");
   std::variant<int, double, std::string> var = "bar";
   CHECK(to_string(var) == "\"bar\"");
 

@@ -177,6 +177,11 @@ requires(detail::pointer_like<T>                              //
   }
 };
 
+template <>
+struct printer<void*> {
+  static void print(std::ostream& os, void* p) noexcept { os << p; }
+};
+
 template <typename... Ts>
 struct printer<std::variant<Ts...>> {
   static void print(std::ostream& os, const std::variant<Ts...>& v) noexcept {
