@@ -41,6 +41,12 @@ struct list {
   list* next = nullptr;
 };
 
+struct user_defined_range {
+  std::vector<int> v;
+  auto begin() const noexcept { return v.begin(); }
+  auto end() const noexcept { return v.end(); }
+};
+
 TEST_CASE("tests") {
   CHECK(to_string(1) == "1");
   CHECK(to_string(4.2) == "4.2");
@@ -79,6 +85,7 @@ TEST_CASE("tests") {
 
   CHECK(to_string(user_defined{}) == "user_defined 42");
   CHECK(to_string(plain_struct{}) == "plain_struct{0, 0}");
+  CHECK(to_string(user_defined_range{{1, 2, 3}}) == "[1, 2, 3]");
 
   auto l = list{1, new list{2}};
   CHECK(to_string(l) == "list{1, list{2, null}}");
