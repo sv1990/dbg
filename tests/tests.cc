@@ -64,7 +64,7 @@ TEST_CASE("tests") {
   CHECK(to_string(s) == "\"foo\"");
   std::map<int, int> m{{1, 2}, {3, 4}};
   CHECK(to_string(m) == "[(1, 2), (3, 4)]");
-  std::tuple t(1, 2., "f");
+  auto t = std::make_tuple(1, 2., "f");
   CHECK(to_string(t) == "(1, 2, \"f\")");
   std::array a{1, 2, 3};
   CHECK(to_string(a) == "[1, 2, 3]");
@@ -82,6 +82,9 @@ TEST_CASE("tests") {
   CHECK(to_string(vp).substr(0, 2) == "0x");
   std::variant<int, double, std::string> var = "bar";
   CHECK(to_string(var) == "\"bar\"");
+
+  auto tt = std::make_tuple(std::make_tuple(1, 2), std::make_tuple(3, 4));
+  CHECK(to_string(tt) == "((1, 2), (3, 4))");
 
   CHECK(to_string(user_defined{}) == "user_defined 42");
   CHECK(to_string(plain_struct{}) == "plain_struct{0, 0}");
