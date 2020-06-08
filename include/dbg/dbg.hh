@@ -79,7 +79,8 @@ template <typename T>
 requires(detail::output_streamable<T>                        //
          and not detail::convertible_to<T, std::string_view> //
          and not detail::range<T>                            //
-         and not detail::pointer_like<T>) struct printer<T> {
+         and not detail::pointer_like<T>)                    //
+    struct printer<T> {
   static void print(std::ostream& os, const T& x) noexcept { os << x; }
 };
 
@@ -114,7 +115,8 @@ requires(detail::range<T>                                     //
 };
 
 template <typename T>
-requires detail::convertible_to<T, std::string_view> struct printer<T> {
+requires detail::convertible_to<T, std::string_view> //
+    struct printer<T> {
   static void print(std::ostream& os, std::string_view x) noexcept {
     os << "\"" << x << "\"";
   }
