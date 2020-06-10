@@ -170,6 +170,16 @@ struct printer<std::tuple<Ts...>> {
   }
 };
 
+template <>
+struct printer<std::nullptr_t> {
+  static void print(std::ostream& os, std::nullptr_t) noexcept { os << "null"; }
+};
+
+template <>
+struct printer<std::nullopt_t> {
+  static void print(std::ostream& os, std::nullopt_t) noexcept { os << "null"; }
+};
+
 template <typename T>
 requires(detail::dereferencable<T>                            //
          and not detail::nullable<T>                          //

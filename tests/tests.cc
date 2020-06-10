@@ -71,10 +71,12 @@ TEST_CASE("tests") {
   CHECK(to_string(a) == "[1, 2, 3]");
   int arr[] = {1, 2, 3};
   CHECK(to_string(arr) == "[1, 2, 3]");
+  CHECK(to_string(std::nullopt) == "null");
   std::optional<int> o;
   CHECK(to_string(o) == "null");
   o = 42;
   CHECK(to_string(o) == "42");
+  CHECK(to_string(nullptr) == "null");
   int* p = nullptr;
   CHECK(to_string(p) == "null");
   p = &n;
