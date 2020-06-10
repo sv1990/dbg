@@ -69,17 +69,24 @@ concept output_streamable = requires(std::ostream& os, const T& x) {
 };
 
 template <typename T>
-concept pointer_like = requires(const T& x) {
-  static_cast<bool>(x);
+concept dereferencable = requires(const T& x) {
   *x;
 };
+
+template <typename T>
+concept nullable = requires(const T& x) {
+  static_cast<bool>(x);
+};
+
+template <typename T>
+concept pointer_like = dereferencable<T>&& nullable<T>;
 } // namespace detail
 
 template <typename T>
 requires(detail::output_streamable<T>                        //
          and not detail::convertible_to<T, std::string_view> //
          and not detail::range<T>                            //
-         and not detail::pointer_like<T>)                    //
+         and not detail::dereferencable<T>)                  //
     struct printer<T> {
   static void print(std::ostream& os, const T& x) noexcept { os << x; }
 };
@@ -160,6 +167,18 @@ struct printer<std::tuple<Ts...>> {
         },
         x);
     os << ')';
+  }
+};
+
+template <typename T>
+requires(detail::dereferencable<T>                            //
+         and not detail::nullable<T>                          //
+         and not detail::range<T>                             //
+         and not detail::convertible_to<T, std::string_view>) //
+    struct printer<T> {
+  static void print(std::ostream& os, const T& x) noexcept {
+    using U = std::remove_cvref_t<decltype(*x)>;
+    printer<U>::print(os, *x);
   }
 };
 

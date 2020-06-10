@@ -56,6 +56,7 @@ TEST_CASE("tests") {
   CHECK(to_string(false) == "false");
   std::vector v{1, 2, 3};
   CHECK(to_string(v) == "[1, 2, 3]");
+  CHECK(to_string(begin(v)) == "1");
   std::vector vv{v, v, v};
   CHECK(to_string(vv) == "[[1, 2, 3], [1, 2, 3], [1, 2, 3]]");
   char c = 'x';
