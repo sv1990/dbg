@@ -6,6 +6,7 @@
 #endif
 
 #include <iostream>
+#include <optional>
 #include <string_view>
 #include <tuple>
 #include <type_traits>
@@ -39,7 +40,7 @@ namespace dbg::detail {
 using std::begin;
 using std::end;
 template <typename T>
-concept range = requires(const T& x) {
+concept range = requires(T& x) {
   begin(x);
   end(x);
 };
@@ -104,9 +105,12 @@ requires(detail::range<T>                                     //
     struct printer<T> {
   static void print(std::ostream& os, const T& x) noexcept {
     using std::begin, std::end;
-    using U   = detail::range_value_t<T>;
-    auto it   = begin(x);
-    auto last = end(x);
+    using U = detail::range_value_t<T>;
+
+    // ranges::filter_view has only non-const begin/end functions
+    auto it   = begin(const_cast<T&>(x));
+    auto last = end(const_cast<T&>(x));
+
     os << '[';
     if (it != last) {
       while (true) {

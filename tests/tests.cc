@@ -4,6 +4,11 @@
 #include "dbg/dbg.hh"
 #include "dbg/dbg_struct.hh"
 
+#if __has_include(<range/v3/all.hpp>)
+#  include <range/v3/all.hpp>
+#  define DBG_HAVE_RANGES
+#endif
+
 #include <array>
 #include <map>
 #include <memory>
@@ -95,4 +100,11 @@ TEST_CASE("tests") {
 
   auto l = list{1, new list{2}};
   CHECK(to_string(l) == "list{1, list{2, null}}");
+
+#ifdef DBG_HAVE_RANGES
+  auto rng = ranges::views::iota(1, 4)                                //
+             | ranges::views::transform([](auto x) { return x * x; }) //
+             | ranges::views::filter([](auto x) { return x % 2 == 1; });
+  CHECK(to_string(rng) == "[1, 9]");
+#endif
 }
