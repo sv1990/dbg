@@ -144,14 +144,15 @@ constexpr std::string_view typename_test_signature() {
   return __PRETTY_FUNCTION__;
 }
 constexpr std::pair<std::size_t, std::size_t> typename_excess_prefix_suffix() {
-  auto s = typename_test_signature<double>();
-  auto i = s.find("double");
-  return {i, s.size() - i - 6};
+  const auto s = typename_test_signature<double>();
+  const auto i = s.find("double");
+  const auto l = sizeof("double") - 1;
+  return {i, s.size() - i - l};
 }
 template <typename T>
 constexpr std::string_view typename_to_string() {
-  auto [prefix, suffix] = typename_excess_prefix_suffix();
-  std::string_view s    = typename_test_signature<T>();
+  const auto [prefix, suffix] = typename_excess_prefix_suffix();
+  std::string_view s          = typename_test_signature<T>();
   s.remove_suffix(suffix);
   s.remove_prefix(prefix);
   return s;
