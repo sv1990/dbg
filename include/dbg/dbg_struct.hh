@@ -9,16 +9,41 @@
 
 namespace dbg {
 namespace detail {
+#ifdef __cpp_concepts
 template <typename T, typename... Ts>
 concept braces_constructible = requires(Ts... xs) {
   T{xs...};
 };
+#else
+template <class T, class... Ts>
+decltype(void(T{std::declval<Ts>()...}), std::true_type{})
+test_is_braces_constructible(int);
+
+template <class, class...>
+std::false_type test_is_braces_constructible(...);
+
+template <class T, class... Ts>
+using is_braces_constructible =
+    decltype(test_is_braces_constructible<T, Ts...>(0));
+
+template <class T, class... Ts>
+inline constexpr bool braces_constructible =
+    is_braces_constructible<T, Ts...>::value;
+#endif
+
+#ifdef __cpp_concepts
+#  define DBG_TEMPLATE(...) template <__VA_ARGS__>
+#  define DBG_REQUIRES(...) requires(__VA_ARGS)
+#else
+#  define DBG_TEMPLATE(...) template <__VA_ARGS__
+#  define DBG_REQUIRES(...) , std::enable_if_t<__VA_ARGS__>* = nullptr >
+#endif
 
 // Use this to disable the copy constructor in the one argument case
 template <typename T>
 struct any_type_except {
-  template <typename U>
-  requires(!std::is_same_v<T, U>) constexpr operator U(); // non explicit
+  DBG_TEMPLATE(typename U)
+  DBG_REQUIRES(!std::is_same_v<T, U>) constexpr operator U(); // non explicit
 };
 
 struct any_type {
@@ -158,24 +183,31 @@ constexpr std::string_view typename_to_string() {
   return s;
 }
 
+#ifdef __cpp_concepts
 template <typename T>
 concept struct_ =
     std::is_class<T>::value&& std::is_aggregate<T>::value && !range<T>;
+#else
+template <typename T>
+inline constexpr auto struct_ =
+    std::is_class<T>::value&& std::is_aggregate<T>::value && !range<T>;
+#endif
 
 } // namespace detail
 template <typename T>
-requires detail::struct_<T> struct printer<T> {
-  static void print(std::ostream& os, const T& x) noexcept {
-    auto t = detail::to_tuple(x);
-    os << detail::typename_to_string<T>() << '{';
-    std::apply(
-        [&os](const auto&... xs) mutable noexcept {
-          detail::pack_print(os, xs...);
-        },
-        t);
-    os << '}';
-  }
-};
+DBG_STRUCT_REQUIRES(printer, T, detail::struct_<T>){
+    static void print(std::ostream & os,
+                      const T& x) noexcept {auto t = detail::to_tuple(x);
+os << detail::typename_to_string<T>() << '{';
+std::apply(
+    [&os](const auto&... xs) mutable noexcept {
+      detail::pack_print(os, xs...);
+    },
+    t);
+os << '}';
+} // namespace dbg
+}
+;
 } // namespace dbg
 
 #endif // DEBUG2_DBG_STRUCT_HH_1587457223874681759_

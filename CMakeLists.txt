@@ -11,7 +11,7 @@ endif ()
 
 add_library(dbg INTERFACE)
 add_library(dbg::dbg ALIAS dbg)
-target_compile_features(dbg INTERFACE cxx_std_20)
+target_compile_features(dbg INTERFACE cxx_std_17)
 target_include_directories(
   dbg
   INTERFACE

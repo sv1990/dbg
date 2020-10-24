@@ -1,10 +1,6 @@
 #ifndef DBG_HH_1586859470462304132_
 #define DBG_HH_1586859470462304132_
 
-#ifndef __cpp_concepts
-#  error "Please use a modern compiler with C++20 support and pass --std=c++2a"
-#endif
-
 #include <iostream>
 #include <optional>
 #include <string_view>
@@ -12,12 +8,12 @@
 #include <type_traits>
 #include <variant>
 
-#if __has_include(<concepts>)
+#if defined(__cpp_concepts) && __has_include(<concepts>)
 #  include <concepts>
 namespace dbg::detail {
 using std::convertible_to;
 } // namespace dbg::detail
-#else
+#elif defined(__cpp_concepts)
 namespace dbg::detail {
 // https://en.cppreference.com/w/cpp/concepts/convertible_to
 template <typename From, typename To>
@@ -26,15 +22,20 @@ concept convertible_to = std::is_convertible_v<From, To>&& requires(
   static_cast<To>(f());
 };
 } // namespace dbg::detail
+#else
+namespace dbg::detail {
+template <typename From, typename To>
+inline constexpr bool convertible_to = std::is_convertible_v<From, To>;
+} // namespace dbg::detail
 #endif
 
-#if __has_include(<ranges>)
+#if defined(__cpp_concepts) && __has_include(<ranges>)
 #  include <ranges>
 namespace dbg::detail {
 using std::ranges::range;
 using std::ranges::range_value_t;
 } // namespace dbg::detail
-#else
+#elif defined(__cpp_concepts)
 #  include <iterator>
 namespace dbg::detail {
 using std::begin;
@@ -48,6 +49,26 @@ template <typename T>
 using range_value_t = typename std::iterator_traits<decltype(
     begin(std::declval<T&>()))>::value_type;
 } // namespace dbg::detail
+#else
+#  include <iterator>
+namespace dbg::detail {
+using std::begin;
+using std::end;
+template <typename T, typename = void>
+struct is_range : std::false_type {};
+
+template <typename T>
+struct is_range<T, std::void_t<decltype(begin(std::declval<T&>())),
+                               decltype(end(std::declval<T&>()))>>
+    : std::true_type {};
+
+template <typename T>
+inline constexpr bool range = is_range<T>::value;
+
+template <typename T>
+using range_value_t = typename std::iterator_traits<decltype(
+    begin(std::declval<T&>()))>::value_type;
+} // namespace dbg::detail
 #endif
 
 namespace dbg {
@@ -55,7 +76,11 @@ namespace detail {
 template <typename>
 inline constexpr bool dependent_false = false;
 }
+#ifdef __cpp_concepts
 template <typename T>
+#else
+template <typename T, typename = void>
+#endif
 struct printer {
   static_assert(detail::dependent_false<T>,
                 "Cannot print user defined types. Please provide a "
@@ -64,6 +89,7 @@ struct printer {
 };
 
 namespace detail {
+#ifdef __cpp_concepts
 template <typename T>
 concept output_streamable = requires(std::ostream& os, const T& x) {
   os << x;
@@ -81,16 +107,64 @@ concept nullable = requires(const T& x) {
 
 template <typename T>
 concept pointer_like = dereferencable<T>&& nullable<T>;
-} // namespace detail
+
+#else
+template <typename T, typename = void>
+struct is_output_streamable : std::false_type {};
 
 template <typename T>
-requires(detail::output_streamable<T>                        //
-         and not detail::convertible_to<T, std::string_view> //
-         and not detail::range<T>                            //
-         and not detail::dereferencable<T>)                  //
-    struct printer<T> {
-  static void print(std::ostream& os, const T& x) noexcept { os << x; }
-};
+struct is_output_streamable<T,
+                            std::void_t<decltype(std::declval<std::ostream&>()
+                                                 << std::declval<const T&>())>>
+    : std::true_type {};
+
+template <typename T>
+inline constexpr bool output_streamable = is_output_streamable<T>::value;
+
+template <typename T, typename = void>
+struct is_dereferencable : std::false_type {};
+
+template <typename T>
+struct is_dereferencable<T, std::void_t<decltype(*std::declval<const T&>())>>
+    : std::true_type {};
+
+template <typename T>
+inline constexpr bool dereferencable = is_dereferencable<T>::value;
+
+template <typename T, typename = void>
+struct is_nullable : std::false_type {};
+
+template <typename T>
+struct is_nullable<
+    T, std::void_t<decltype(static_cast<bool>(std::declval<const T&>()))>>
+    : std::true_type {};
+
+template <typename T>
+inline constexpr bool nullable = is_nullable<T>::value;
+
+template <typename T>
+inline constexpr bool pointer_like = dereferencable<T>&& nullable<T>;
+#endif
+} // namespace detail
+
+#ifdef __cpp_concepts
+#  define DBG_STRUCT_REQUIRES(name, type, requirements)                        \
+    requires(requirements) struct name<type>
+#else
+#  define DBG_STRUCT_REQUIRES(name, type, requirements)                        \
+    struct name<type, std::enable_if_t<requirements>>
+#endif
+
+template <typename T>
+DBG_STRUCT_REQUIRES(printer, T,
+                    (detail::output_streamable<T>                        //
+                     and not detail::convertible_to<T, std::string_view> //
+                     and not detail::range<T>                            //
+                     and not detail::dereferencable<T>)){
+    static void print(std::ostream & os, const T& x) noexcept {os << x;
+} // namespace dbg
+}
+;
 
 template <>
 struct printer<bool> {
@@ -100,38 +174,39 @@ struct printer<bool> {
 };
 
 template <typename T>
-requires(detail::range<T>                                     //
-         and not detail::convertible_to<T, std::string_view>) //
-    struct printer<T> {
-  static void print(std::ostream& os, const T& x) noexcept {
-    using std::begin, std::end;
-    using U = detail::range_value_t<T>;
+DBG_STRUCT_REQUIRES(printer, T,
+                    (detail::range<T> //
+                     and not detail::convertible_to<T, std::string_view>)){
+    static void print(std::ostream & os, const T& x) noexcept {using std::begin,
+                                                               std::end;
+using U = detail::range_value_t<T>;
 
-    // ranges::filter_view has only non-const begin/end functions
-    auto it   = begin(const_cast<T&>(x));
-    auto last = end(const_cast<T&>(x));
+// ranges::filter_view has only non-const begin/end functions
+auto it   = begin(const_cast<T&>(x));
+auto last = end(const_cast<T&>(x));
 
-    os << '[';
-    if (it != last) {
-      while (true) {
-        printer<U>::print(os, *it);
-        if (++it == last) {
-          break;
-        }
-        os << ", ";
-      }
+os << '[';
+if (it != last) {
+  while (true) {
+    printer<U>::print(os, *it);
+    if (++it == last) {
+      break;
     }
-    os << ']';
+    os << ", ";
   }
-};
+}
+os << ']';
+}
+}
+;
 
 template <typename T>
-requires detail::convertible_to<T, std::string_view> //
-    struct printer<T> {
-  static void print(std::ostream& os, std::string_view x) noexcept {
-    os << "\"" << x << "\"";
-  }
-};
+DBG_STRUCT_REQUIRES(printer, T, (detail::convertible_to<T, std::string_view>)){
+    static void print(std::ostream & os,
+                      std::string_view x) noexcept {os << "\"" << x << "\"";
+}
+}
+;
 
 template <>
 struct printer<char> {
@@ -185,32 +260,34 @@ struct printer<std::nullopt_t> {
 };
 
 template <typename T>
-requires(detail::dereferencable<T>                            //
-         and not detail::nullable<T>                          //
-         and not detail::range<T>                             //
-         and not detail::convertible_to<T, std::string_view>) //
-    struct printer<T> {
-  static void print(std::ostream& os, const T& x) noexcept {
-    using U = std::remove_cvref_t<decltype(*x)>;
-    printer<U>::print(os, *x);
-  }
-};
+DBG_STRUCT_REQUIRES(printer, T,
+                    (detail::dereferencable<T>   //
+                     and not detail::nullable<T> //
+                     and not detail::range<T>    //
+                     and not detail::convertible_to<T, std::string_view>)){
+    static void print(std::ostream & os, const T& x) noexcept {
+        using U = std::remove_cv_t<std::remove_reference_t<decltype(*x)>>;
+printer<U>::print(os, *x);
+}
+}
+;
 
 template <typename T>
-requires(detail::pointer_like<T>                              //
-         and not detail::range<T>                             //
-         and not detail::convertible_to<T, std::string_view>) //
-    struct printer<T> {
-  static void print(std::ostream& os, const T& x) noexcept {
-    using U = std::remove_cvref_t<decltype(*x)>;
-    if (x) {
-      printer<U>::print(os, *x);
-    }
-    else {
-      os << "null";
-    }
-  }
-};
+DBG_STRUCT_REQUIRES(printer, T,
+                    (detail::pointer_like<T>  //
+                     and not detail::range<T> //
+                     and not detail::convertible_to<T, std::string_view>)){
+    static void print(std::ostream & os, const T& x) noexcept {
+        using U = std::remove_cv_t<std::remove_reference_t<decltype(*x)>>;
+if (x) {
+  printer<U>::print(os, *x);
+}
+else {
+  os << "null";
+}
+}
+}
+;
 
 template <>
 struct printer<void*> {
