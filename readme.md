@@ -8,7 +8,7 @@ This library simplifes quick debug printing by providing the `DBG` which can pri
 
 ```C++
 #include "dbg/dbg.hh"
-std::map<std::string> m{{"foo", 1}, {"bar", 2}};
+std::map<std::string, int> m{{"foo", 1}, {"bar", 2}};
 DBG(m);
 ```
 
