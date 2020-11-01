@@ -101,6 +101,8 @@ TEST_CASE("tests") {
   auto l = list{1, new list{2}};
   CHECK(to_string(l) == "list{1, list{2, null}}");
 
+  CHECK(to_string(std::make_pair('a', 'b')) == "('a', 'b')");
+
 #ifdef DBG_HAVE_RANGES
   auto rng = ranges::views::iota(1, 4)                                //
              | ranges::views::transform([](auto x) { return x * x; }) //

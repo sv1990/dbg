@@ -143,7 +143,11 @@ struct printer<char> {
 template <typename T, typename U>
 struct printer<std::pair<T, U>> {
   static void print(std::ostream& os, const std::pair<T, U>& x) noexcept {
-    os << '(' << x.first << ", " << x.second << ')';
+    os << '(';
+    printer<std::remove_cvref_t<T>>::print(os, x.first);
+    os << ", ";
+    printer<std::remove_cvref_t<U>>::print(os, x.second);
+    os << ')';
   }
 };
 
