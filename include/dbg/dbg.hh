@@ -12,7 +12,7 @@
 #include <type_traits>
 #include <variant>
 
-#if __has_include(<concepts>)
+#if defined(__cpp_lib_concepts)
 #  include <concepts>
 namespace dbg::detail {
 using std::convertible_to;
@@ -28,7 +28,7 @@ concept convertible_to = std::is_convertible_v<From, To>&& requires(
 } // namespace dbg::detail
 #endif
 
-#if __has_include(<ranges>)
+#if defined(__cpp_lib_ranges)
 #  include <ranges>
 namespace dbg::detail {
 using std::ranges::range;
